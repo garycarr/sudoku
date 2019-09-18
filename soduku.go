@@ -4,6 +4,13 @@ import (
 	"fmt"
 )
 
+// CheckedGrid stores whether a grid is valid, and complete
+type CheckedGrid struct {
+	Complete bool
+	Message  string
+	Valid    bool
+}
+
 type emptyPosition struct {
 	rowNumber int
 	colNumber int
@@ -21,41 +28,143 @@ type adjacentToCheck struct {
 	adjacentCols []int
 }
 
-// SolveGrid attempts to solve a given suduko board
-func SolveGrid(wholeGrid [][]int) ([][]int, error) {
+// allRegions are the 9 sections on the grid to make between 1 and 9
+var allRegions = []region{
+	region{minRowNumber: 0, maxRowNumber: 2, minColNumber: 0, maxColNumber: 2},
+	region{minRowNumber: 0, maxRowNumber: 2, minColNumber: 3, maxColNumber: 5},
+	region{minRowNumber: 0, maxRowNumber: 2, minColNumber: 6, maxColNumber: 8},
+	region{minRowNumber: 3, maxRowNumber: 5, minColNumber: 0, maxColNumber: 2},
+	region{minRowNumber: 3, maxRowNumber: 5, minColNumber: 3, maxColNumber: 5},
+	region{minRowNumber: 3, maxRowNumber: 5, minColNumber: 6, maxColNumber: 8},
+	region{minRowNumber: 6, maxRowNumber: 8, minColNumber: 0, maxColNumber: 2},
+	region{minRowNumber: 6, maxRowNumber: 8, minColNumber: 3, maxColNumber: 5},
+	region{minRowNumber: 6, maxRowNumber: 8, minColNumber: 6, maxColNumber: 8},
+}
+
+// SolveGrid attempts to solve a given suduko board. It returns the grid as complete as it
+// could achieve, and a struct indicating the status of the grid
+func SolveGrid(grid [][]int) ([][]int, CheckedGrid, error) {
+	// previousNumEPS holds the previous loops count of how many emptyPositions exist.
+	// if this number does not decrease then there is no more need to iterate
 	previousNumEPS := 0
 
+	cg := CheckedGrid{}
+
 	for {
-		eps := getEmptyPositions(wholeGrid)
+		eps := getEmptyPositions(grid)
 		if len(eps) == 0 || len(eps) == previousNumEPS {
 			break
 		}
 		previousNumEPS = len(eps)
 
 		for _, ep := range eps {
-			foundNum, err := traverseImmediateLines(wholeGrid, ep)
+			foundNum, err := traverseImmediateLines(grid, ep)
 			if err != nil {
-				return nil, err
+				return nil, cg, err
 			}
 			if foundNum > 0 {
-				wholeGrid[ep.rowNumber][ep.colNumber] = foundNum
+				grid[ep.rowNumber][ep.colNumber] = foundNum
 			}
 
-			if err := traverseAdjacent(wholeGrid, ep); err != nil {
-				return nil, err
+			if err := traverseAdjacent(grid, ep); err != nil {
+				return nil, cg, err
+			}
+		}
+	}
+	cg = CheckGrid(grid)
+	return grid, cg, nil
+}
+
+// CheckGrid returns where a given grid is complete, and if it is valid
+func CheckGrid(grid [][]int) CheckedGrid {
+	cg := CheckedGrid{Valid: true, Complete: true, Message: ""}
+
+	// Check all rows
+	totalRows := 0
+	for rowNum, row := range grid {
+		totalRows++
+		foundNumbersRows := make(map[int]int, 9)
+
+		for i := 0; i <= 8; i++ {
+			if row[i] > 0 {
+				foundNumbersRows[row[i]]++
+			} else {
+				cg.Complete = false
+			}
+		}
+		for num, count := range foundNumbersRows {
+			if count != 1 {
+				cg.Complete = false
+				if count > 1 {
+					cg.Message = fmt.Sprintf("%s A duplicate of %d was found in row %d\n", cg.Message, num, rowNum)
+					cg.Valid = false
+				}
+			}
+		}
+	}
+	if totalRows != 9 {
+		cg.Message = fmt.Sprintf("%s Expected 9 rows, found %d", cg.Message, totalRows)
+		fmt.Printf("expected 9 rows, found %d\n", totalRows)
+		cg.Valid = false
+		cg.Complete = false
+	}
+
+	// Check all columns
+	for colNum := 0; colNum <= 8; colNum++ {
+		foundNumbersCol := make(map[int]int, 9)
+		for rowNum := 0; rowNum <= 8; rowNum++ {
+			num := grid[rowNum][colNum]
+			if num > 0 {
+				foundNumbersCol[num]++
+			} else {
+				cg.Complete = false
+			}
+		}
+
+		for num, count := range foundNumbersCol {
+			if count != 1 {
+				cg.Complete = false
+				if count > 1 {
+					cg.Message = fmt.Sprintf("%s A duplicate of %d was found in column %d\n", cg.Message, num, colNum)
+					cg.Valid = false
+				}
 			}
 		}
 	}
 
-	return wholeGrid, nil
+	// Check all the regions
+	for _, reg := range allRegions {
+		foundNumbersGrid := make(map[int]int, 9)
+		for row := reg.minRowNumber; row <= reg.maxRowNumber; row++ {
+			for col := reg.minColNumber; col <= reg.maxColNumber; col++ {
+				num := grid[row][col]
+				if num > 0 {
+					foundNumbersGrid[num]++
+				}
+			}
+		}
+		for num, count := range foundNumbersGrid {
+			if count != 1 {
+				cg.Complete = false
+				if count > 1 {
+					gridPosition := fmt.Sprintf("rowNumber {%d, %d}, colNumber {%d, %d}",
+						reg.minRowNumber, reg.maxRowNumber, reg.minColNumber, reg.maxColNumber)
+					cg.Message = fmt.Sprintf("%s A duplicate of %d was found in grid %q\n", cg.Message, num, gridPosition)
+					cg.Valid = false
+				}
+			}
+		}
+	}
+
+	return cg
 }
 
 // getEmptyPositions returns the positions of empty boxes
-func getEmptyPositions(wholeGrid [][]int) []emptyPosition {
+func getEmptyPositions(grid [][]int) []emptyPosition {
 	eps := []emptyPosition{}
 
 	// identify missing positions
-	for rowNumber, row := range wholeGrid {
+	for rowNumber, row := range grid {
 		for colNumber, num := range row {
 			if num > 0 {
 				continue
@@ -71,14 +180,14 @@ func getEmptyPositions(wholeGrid [][]int) []emptyPosition {
 
 // traverseImmediateLines checks the column, row, and grid the emptyPosition is in
 // to look for entries it can make
-func traverseImmediateLines(wholeGrid [][]int, ep emptyPosition) (int, error) {
+func traverseImmediateLines(grid [][]int, ep emptyPosition) (int, error) {
 	// check the box it is in
 	reg, err := getRegion(ep)
 	if err != nil {
 		return 0, err
 	}
 
-	pn, err := possibleNumbers(wholeGrid, ep, reg)
+	pn, err := possibleNumbers(grid, ep, reg)
 	if err != nil {
 		return 0, err
 	}
@@ -91,7 +200,7 @@ func traverseImmediateLines(wholeGrid [][]int, ep emptyPosition) (int, error) {
 }
 
 // possibleNumbers returns the numbers that can possibly placed into a given position
-func possibleNumbers(wholeGrid [][]int, ep emptyPosition, reg region) ([]int, error) {
+func possibleNumbers(grid [][]int, ep emptyPosition, reg region) ([]int, error) {
 	possibleNumbers := map[int]bool{}
 	for i := 1; i <= 9; i++ {
 		possibleNumbers[i] = false
@@ -99,27 +208,27 @@ func possibleNumbers(wholeGrid [][]int, ep emptyPosition, reg region) ([]int, er
 
 	// check the row it is on
 	for col := 0; col <= 8; col++ {
-		if possibleNumbers[wholeGrid[ep.rowNumber][col]] {
+		if possibleNumbers[grid[ep.rowNumber][col]] {
 			continue
 		}
-		possibleNumbers[wholeGrid[ep.rowNumber][col]] = true
+		possibleNumbers[grid[ep.rowNumber][col]] = true
 	}
 
 	// check the column it is in
 	for row := 0; row <= 8; row++ {
-		if possibleNumbers[wholeGrid[row][ep.colNumber]] {
+		if possibleNumbers[grid[row][ep.colNumber]] {
 			continue
 		}
-		possibleNumbers[wholeGrid[row][ep.colNumber]] = true
+		possibleNumbers[grid[row][ep.colNumber]] = true
 	}
 
 	// Check the grid it is in
 	for row := reg.minRowNumber; row <= reg.maxRowNumber; row++ {
 		for col := reg.minColNumber; col <= reg.maxColNumber; col++ {
-			if possibleNumbers[wholeGrid[row][col]] {
+			if possibleNumbers[grid[row][col]] {
 				continue
 			}
-			possibleNumbers[wholeGrid[row][col]] = true
+			possibleNumbers[grid[row][col]] = true
 		}
 	}
 
@@ -147,13 +256,13 @@ func possibleNumbers(wholeGrid [][]int, ep emptyPosition, reg region) ([]int, er
 // 0, 0, 0, 0, 0, 0, 0, 0, 0
 //
 // Then at position {1,8} there has to be a 1, as it cannot go anywhere else in the top right grid
-func traverseAdjacent(wholeGrid [][]int, ep emptyPosition) error {
+func traverseAdjacent(grid [][]int, ep emptyPosition) error {
 	reg, err := getRegion(ep)
 	if err != nil {
 		return err
 	}
 
-	pn, err := possibleNumbers(wholeGrid, ep, reg)
+	pn, err := possibleNumbers(grid, ep, reg)
 	if err != nil {
 		return err
 	}
@@ -167,7 +276,7 @@ func traverseAdjacent(wholeGrid [][]int, ep emptyPosition) error {
 		for i := 0; i <= 8; i++ {
 
 			for _, c := range r.adjacentCols {
-				if wholeGrid[i][c] == num {
+				if grid[i][c] == num {
 					foundNum++
 					if foundNum == 2 {
 						// We found the number in both adjacent columns, so it has to be in this column
@@ -177,12 +286,12 @@ func traverseAdjacent(wholeGrid [][]int, ep emptyPosition) error {
 
 						alreadyPopulated := 0
 						for _, r := range r.adjacentRows {
-							if wholeGrid[r][ep.colNumber] != 0 {
+							if grid[r][ep.colNumber] != 0 {
 								alreadyPopulated++
 							}
 						}
 						if alreadyPopulated == 2 {
-							wholeGrid[ep.rowNumber][ep.colNumber] = num
+							grid[ep.rowNumber][ep.colNumber] = num
 						}
 						break
 					}
@@ -194,7 +303,7 @@ func traverseAdjacent(wholeGrid [][]int, ep emptyPosition) error {
 		for _, row := range r.adjacentRows {
 
 			for col := 0; col <= 8; col++ {
-				if wholeGrid[row][col] == num {
+				if grid[row][col] == num {
 					foundNum++
 				}
 				if foundNum == 2 {
@@ -204,12 +313,12 @@ func traverseAdjacent(wholeGrid [][]int, ep emptyPosition) error {
 					foundNumColAndRow++
 					alreadyPopulated := 0
 					for _, c := range r.adjacentCols {
-						if wholeGrid[ep.rowNumber][c] != 0 {
+						if grid[ep.rowNumber][c] != 0 {
 							alreadyPopulated++
 						}
 					}
 					if alreadyPopulated == 2 {
-						wholeGrid[ep.rowNumber][ep.colNumber] = num
+						grid[ep.rowNumber][ep.colNumber] = num
 					}
 					break
 				}
@@ -219,7 +328,7 @@ func traverseAdjacent(wholeGrid [][]int, ep emptyPosition) error {
 		// Because the entry was identified in both row and column, we know this is the correct location
 		// even though there is empty boxes next to the position
 		if foundNumColAndRow == 2 {
-			wholeGrid[ep.rowNumber][ep.colNumber] = num
+			grid[ep.rowNumber][ep.colNumber] = num
 		}
 	}
 	return nil
@@ -287,4 +396,17 @@ func getRegion(ep emptyPosition) (region, error) {
 		return reg, fmt.Errorf("colNumber %d is invalid", ep.colNumber)
 	}
 	return reg, nil
+}
+
+// DrawGrid prints out the grid to the terminal
+func DrawGrid(box [][]int) {
+	println("")
+	for _, row := range box {
+		line := ""
+		for _, num := range row {
+			line = fmt.Sprintf("%s | %d", line, num)
+		}
+		println(fmt.Sprintf("%s |", line))
+	}
+	println("")
 }

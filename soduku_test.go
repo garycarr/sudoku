@@ -1,7 +1,6 @@
 package soduku
 
 import (
-	"fmt"
 	"sort"
 	"testing"
 
@@ -243,9 +242,9 @@ func TestSolveGridSimple(t *testing.T) {
 
 	for _, td := range tt {
 		t.Run(td.description, func(t *testing.T) {
-			output, err := SolveGrid(td.input)
+			output, cg, err := SolveGrid(td.input)
 			require.Nil(t, err)
-			checkWholeGrid(t, output, true)
+			assert.Equal(t, CheckedGrid{Valid: true, Complete: true}, cg)
 
 			if td.drawGrid {
 				DrawGrid(output)
@@ -256,11 +255,11 @@ func TestSolveGridSimple(t *testing.T) {
 
 func TestSolveGridMedium(t *testing.T) {
 	tt := []struct {
-		description   string
-		drawGrid      bool
-		input         [][]int
-		expectSuccess bool
-		expectOutput  [][]int
+		description    string
+		drawGrid       bool
+		input          [][]int
+		expectComplete bool
+		expectOutput   [][]int
 	}{
 		{
 			description: "one",
@@ -275,7 +274,7 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{6, 7, 8, 9, 0, 2, 3, 4, 5},
 				[]int{0, 0, 2, 3, 4, 5, 6, 7, 8},
 			},
-			expectSuccess: false,
+			expectComplete: false,
 			expectOutput: [][]int{
 				[]int{0, 2, 3, 0, 5, 6, 7, 8, 9},
 				[]int{0, 5, 6, 0, 8, 9, 1, 2, 3},
@@ -301,7 +300,7 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{0, 7, 8, 9, 0, 0, 3, 4, 5},
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
-			expectSuccess: false,
+			expectComplete: false,
 			expectOutput: [][]int{
 				[]int{0, 0, 0, 0, 5, 0, 7, 8, 9},
 				[]int{0, 5, 0, 0, 8, 0, 1, 2, 3},
@@ -327,7 +326,7 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
-			expectSuccess: false,
+			expectComplete: false,
 			expectOutput: [][]int{
 				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
 				[]int{4, 5, 6, 7, 8, 9, 0, 0, 1},
@@ -353,7 +352,7 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{6, 0, 8, 0, 0, 0, 1, 0, 0},
 				[]int{9, 0, 2, 0, 0, 0, 0, 0, 0},
 			},
-			expectSuccess: false,
+			expectComplete: false,
 			expectOutput: [][]int{
 				[]int{1, 2, 3, 0, 0, 0, 0, 0, 0},
 				[]int{4, 5, 6, 0, 0, 0, 0, 0, 0},
@@ -379,7 +378,7 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
-			expectSuccess: false,
+			expectComplete: false,
 			expectOutput: [][]int{
 				[]int{1, 0, 0, 0, 0, 0, 0, 0, 0},
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -396,28 +395,28 @@ func TestSolveGridMedium(t *testing.T) {
 
 	for _, td := range tt {
 		t.Run(td.description, func(t *testing.T) {
-			output, err := SolveGrid(td.input)
+			output, cg, err := SolveGrid(td.input)
 			require.Nil(t, err)
 
 			if td.drawGrid {
 				DrawGrid(output)
 			}
 
-			if !td.expectSuccess {
+			if !td.expectComplete {
 				assert.Equal(t, td.expectOutput, output)
 			}
-			checkWholeGrid(t, output, td.expectSuccess)
+			assert.Equal(t, CheckedGrid{Valid: true, Complete: td.expectComplete}, cg)
 		})
 	}
 }
 
 func TestSolveGridRealExamples(t *testing.T) {
 	tt := []struct {
-		description   string
-		drawGrid      bool
-		input         [][]int
-		expectSuccess bool
-		expectOutput  [][]int
+		description    string
+		drawGrid       bool
+		input          [][]int
+		expectComplete bool
+		expectOutput   [][]int
 	}{
 		{
 			description: "one",
@@ -432,7 +431,7 @@ func TestSolveGridRealExamples(t *testing.T) {
 				[]int{9, 0, 1, 0, 5, 0, 0, 0, 0},
 				[]int{0, 0, 0, 1, 0, 0, 3, 0, 5},
 			},
-			expectSuccess: true,
+			expectComplete: true,
 		},
 		{
 			description: "two",
@@ -458,23 +457,23 @@ func TestSolveGridRealExamples(t *testing.T) {
 				[]int{7, 0, 6, 0, 4, 5, 0, 1, 9},
 				[]int{4, 0, 1, 9, 6, 0, 0, 7, 5},
 			},
-			expectSuccess: false,
+			expectComplete: false,
 		},
 	}
 
 	for _, td := range tt {
 		t.Run(td.description, func(t *testing.T) {
-			output, err := SolveGrid(td.input)
+			output, cg, err := SolveGrid(td.input)
 			require.Nil(t, err)
 
 			if td.drawGrid {
 				DrawGrid(output)
 			}
 
-			if !td.expectSuccess {
+			if !td.expectComplete {
 				assert.Equal(t, td.expectOutput, output)
 			}
-			checkWholeGrid(t, output, td.expectSuccess)
+			assert.Equal(t, CheckedGrid{Valid: true, Complete: td.expectComplete}, cg)
 		})
 	}
 }
@@ -647,94 +646,124 @@ func TestRemainingColsToCheck(t *testing.T) {
 	}
 }
 
-func checkWholeGrid(t *testing.T, wholeGrid [][]int, expectAll bool) {
-	checkRows(t, wholeGrid, expectAll)
-	checkColumns(t, wholeGrid, expectAll)
-	checkGridBoxes(t, wholeGrid, expectAll)
-}
-
-// checkRows makes sure all rows are present, 1-9
-func checkRows(t *testing.T, wholeGrid [][]int, expectAll bool) {
-	for _, row := range wholeGrid {
-		foundNumbers := make(map[int]int, 9)
-
-		for i := 0; i <= 8; i++ {
-			foundNumbers[row[i]]++
-		}
-
-		if expectAll {
-			require.Len(t, foundNumbers, 9)
-		}
-
-		for i := 1; i <= 9; i++ {
-			if expectAll {
-				// each row should have 1 - 9
-				assert.Equal(t, 1, foundNumbers[i])
-			} else {
-				// just check there were no duplicates
-				if foundNumbers[i] > 1 {
-					t.Errorf("Duplicate row found for %d", foundNumbers[i])
-				}
-			}
-		}
+func TestCheckGrid(t *testing.T) {
+	tt := []struct {
+		description  string
+		input        [][]int
+		expectReturn CheckedGrid
+	}{
+		{
+			description: "valid and complete entry",
+			input: [][]int{
+				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
+				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
+				[]int{9, 1, 2, 3, 4, 5, 6, 7, 8},
+			},
+			expectReturn: CheckedGrid{Complete: true, Valid: true},
+		},
+		{
+			description: "valid, not complete",
+			input: [][]int{
+				[]int{0, 2, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
+				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
+				[]int{9, 1, 2, 3, 4, 5, 6, 7, 8},
+			},
+			expectReturn: CheckedGrid{Complete: false, Valid: true},
+		},
+		{
+			description: "invalid, duplicate in row",
+			input: [][]int{
+				[]int{1, 1, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
+				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
+				[]int{9, 1, 2, 3, 4, 5, 6, 7, 8},
+			},
+			expectReturn: CheckedGrid{Complete: false, Valid: false},
+		},
+		{
+			description: "invalid, duplicate in column",
+			input: [][]int{
+				[]int{1, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{1, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 2, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 2, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+			expectReturn: CheckedGrid{Complete: false, Valid: false},
+		},
+		{
+			description: "invalid, duplicate in top grid region",
+			input: [][]int{
+				[]int{1, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 1, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 1, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+			expectReturn: CheckedGrid{Complete: false, Valid: false},
+		},
+		{
+			description: "invalid, duplicate in bottom grid region",
+			input: [][]int{
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 1, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 1, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+			expectReturn: CheckedGrid{Complete: false, Valid: false},
+		},
+		{
+			description: "invalid, duplicate in middle grid region",
+			input: [][]int{
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 1, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 1, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+			expectReturn: CheckedGrid{Complete: false, Valid: false},
+		},
 	}
-}
 
-// checkRows makes sure all rows are present, 1-9
-func checkColumns(t *testing.T, wholeGrid [][]int, expectAll bool) {
-	for col := 0; col <= 8; col++ {
-		foundNumbers := make(map[int]int, 9)
-		for row := 0; row <= 8; row++ {
-			num := wholeGrid[row][col]
-			foundNumbers[num]++
-		}
-		if expectAll {
-			require.Len(t, foundNumbers, 9)
-		}
-		for i := 1; i <= 9; i++ {
-			if expectAll {
-				// each column should have 1 - 9
-				assert.Equal(t, 1, foundNumbers[i])
-			} else {
-				// just check there were no duplicates
-				if foundNumbers[i] > 1 {
-					t.Errorf("Duplicate col found for %d", foundNumbers[i])
-				}
-			}
-		}
-	}
-}
-
-// checkGridBoxes makes sure each box has 1-9
-func checkGridBoxes(t *testing.T, wholeGrid [][]int, expectAll bool) {
-	reg := region{
-		minRowNumber: 0,
-		maxRowNumber: 2,
-		minColNumber: 0,
-		maxColNumber: 2,
-	}
-
-	foundNumbers := make(map[int]int, 9)
-	for row := reg.minRowNumber; row <= reg.maxRowNumber; row++ {
-		for col := reg.minColNumber; col <= reg.maxColNumber; col++ {
-			foundNumbers[wholeGrid[row][col]]++
-		}
-	}
-	gridPosition := fmt.Sprintf("rowNumber {%d, %d}, colNumber {%d, %d}",
-		reg.minRowNumber, reg.maxRowNumber, reg.minColNumber, reg.maxColNumber)
-
-	if expectAll {
-		require.Len(t, foundNumbers, 9, fmt.Sprintf("len for grid %s", gridPosition))
-	}
-	for i := 1; i <= 9; i++ {
-		if expectAll {
-			// each box should have 1 - 9
-			assert.Equal(t, 1, foundNumbers[i], fmt.Sprintf("for num '%d' %s", i, gridPosition))
-		} else {
-			// just check there were no duplicates
-			if foundNumbers[i] > 1 {
-				t.Errorf("Duplicate in grid found for %d in grid %s", i, gridPosition)
-			}
-		}
+	for _, td := range tt {
+		t.Run(td.description, func(t *testing.T) {
+			cg := CheckGrid(td.input)
+			assert.Equal(t, td.expectReturn.Complete, cg.Complete)
+			assert.Equal(t, td.expectReturn.Valid, cg.Valid)
+		})
 	}
 }

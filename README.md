@@ -31,4 +31,4 @@ SolveGrid([][]int{
 }
  ```
 
- This was done as a hack on a plane in a few hours. It is not efficient and it won't solve everything (but will solve as much as it can!).
+ This was done as a hack on a plane in a few hours. I don't imagine I'll work on it again. It won't solve everything but it does try its best!
