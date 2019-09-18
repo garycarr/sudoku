@@ -1,6 +1,7 @@
 package soduku
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -72,7 +73,24 @@ func SolveGrid(grid [][]int) ([][]int, CheckedGrid, error) {
 		}
 	}
 	cg = CheckGrid(grid)
-	return grid, cg, nil
+
+	if !cg.Valid {
+		return grid, cg, errors.New("the grid is invalid")
+	}
+	if cg.Complete {
+		return grid, cg, nil
+	}
+
+	var err error
+	grid, err = bruteForceGuess(grid)
+	if err != nil {
+		return grid, cg, err
+	}
+	cg = CheckGrid(grid)
+	if !cg.Valid {
+		return grid, cg, errors.New("the grid is invalid after brute forcing")
+	}
+	return grid, cg, err
 }
 
 // CheckGrid returns where a given grid is complete, and if it is valid
@@ -104,7 +122,6 @@ func CheckGrid(grid [][]int) CheckedGrid {
 	}
 	if totalRows != 9 {
 		cg.Message = fmt.Sprintf("%s Expected 9 rows, found %d", cg.Message, totalRows)
-		fmt.Printf("expected 9 rows, found %d\n", totalRows)
 		cg.Valid = false
 		cg.Complete = false
 	}
@@ -155,7 +172,6 @@ func CheckGrid(grid [][]int) CheckedGrid {
 			}
 		}
 	}
-
 	return cg
 }
 
@@ -334,6 +350,56 @@ func traverseAdjacent(grid [][]int, ep emptyPosition) error {
 	return nil
 }
 
+// bruteForceGuess adds in numbers to empty positions and sees if it can solve the rest of the grid
+// This is a weak brute force, it should try combinations of numbers
+func bruteForceGuess(grid [][]int) ([][]int, error) {
+	eps := getEmptyPositions(grid)
+
+	copyGrid := func(grid [][]int) [][]int {
+		tempGrid := make([][]int, len(grid))
+		for i := range grid {
+			tempGrid[i] = make([]int, len(grid[i]))
+			copy(tempGrid[i], grid[i])
+		}
+		return tempGrid
+	}
+
+	tempGrid := copyGrid(grid)
+
+	for _, ep := range eps {
+		reg, err := getRegion(ep)
+		if err != nil {
+			return nil, err
+		}
+
+		pns, err := possibleNumbers(tempGrid, ep, reg)
+		if err != nil {
+			return nil, err
+		}
+		for _, pn := range pns {
+			foundNum, err := traverseImmediateLines(tempGrid, ep)
+			if err != nil {
+				return nil, err
+			}
+			if foundNum > 0 {
+				tempGrid[ep.rowNumber][ep.colNumber] = pn
+			}
+
+			if err := traverseAdjacent(tempGrid, ep); err != nil {
+				return nil, err
+			}
+			cg := CheckGrid(tempGrid)
+			if !cg.Valid {
+				tempGrid = copyGrid(grid)
+			}
+			if cg.Complete {
+				return tempGrid, nil
+			}
+		}
+	}
+	return grid, nil
+}
+
 // adjacentRowsAndCols the rows and columns next to the position, but within the same grid
 func adjacentRowsAndCols(reg region, ep emptyPosition) adjacentToCheck {
 	r := adjacentToCheck{}
@@ -398,10 +464,10 @@ func getRegion(ep emptyPosition) (region, error) {
 	return reg, nil
 }
 
-// DrawGrid prints out the grid to the terminal
-func DrawGrid(box [][]int) {
+// PrintGrid prints out the grid to the terminal
+func PrintGrid(grid [][]int) {
 	println("")
-	for _, row := range box {
+	for _, row := range grid {
 		line := ""
 		for _, num := range row {
 			line = fmt.Sprintf("%s | %d", line, num)

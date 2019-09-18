@@ -11,7 +11,7 @@ import (
 func TestSolveGridSimple(t *testing.T) {
 	tt := []struct {
 		description string
-		drawGrid    bool
+		printGrid   bool
 		input       [][]int
 	}{
 		{
@@ -246,8 +246,8 @@ func TestSolveGridSimple(t *testing.T) {
 			require.Nil(t, err)
 			assert.Equal(t, CheckedGrid{Valid: true, Complete: true}, cg)
 
-			if td.drawGrid {
-				DrawGrid(output)
+			if td.printGrid {
+				PrintGrid(output)
 			}
 		})
 	}
@@ -256,7 +256,7 @@ func TestSolveGridSimple(t *testing.T) {
 func TestSolveGridMedium(t *testing.T) {
 	tt := []struct {
 		description    string
-		drawGrid       bool
+		printGrid      bool
 		input          [][]int
 		expectComplete bool
 		expectOutput   [][]int
@@ -398,8 +398,8 @@ func TestSolveGridMedium(t *testing.T) {
 			output, cg, err := SolveGrid(td.input)
 			require.Nil(t, err)
 
-			if td.drawGrid {
-				DrawGrid(output)
+			if td.printGrid {
+				PrintGrid(output)
 			}
 
 			if !td.expectComplete {
@@ -413,7 +413,7 @@ func TestSolveGridMedium(t *testing.T) {
 func TestSolveGridRealExamples(t *testing.T) {
 	tt := []struct {
 		description    string
-		drawGrid       bool
+		printGrid      bool
 		input          [][]int
 		expectComplete bool
 		expectOutput   [][]int
@@ -434,17 +434,17 @@ func TestSolveGridRealExamples(t *testing.T) {
 			expectComplete: true,
 		},
 		{
-			description: "two",
+			description: "two only passes with brute force",
 			input: [][]int{
-				[]int{0, 0, 0, 0, 9, 0, 0, 0, 1},
-				[]int{6, 1, 0, 5, 2, 0, 7, 0, 0},
-				[]int{5, 0, 7, 0, 0, 3, 0, 0, 0},
-				[]int{2, 0, 3, 0, 1, 0, 0, 5, 0},
-				[]int{0, 0, 0, 7, 0, 9, 0, 0, 0},
-				[]int{0, 8, 0, 0, 3, 0, 1, 0, 7},
-				[]int{0, 0, 0, 3, 0, 0, 6, 0, 4},
-				[]int{0, 0, 6, 0, 4, 5, 0, 1, 9},
-				[]int{4, 0, 0, 0, 6, 0, 0, 0, 0},
+				[]int{3, 4, 2, 6, 9, 7, 5, 8, 1},
+				[]int{6, 1, 8, 5, 2, 4, 7, 9, 3},
+				[]int{5, 9, 7, 1, 8, 3, 4, 6, 2},
+				[]int{2, 7, 3, 4, 1, 0, 9, 5, 6},
+				[]int{1, 6, 4, 7, 5, 9, 0, 3, 0},
+				[]int{9, 8, 5, 0, 3, 0, 1, 0, 7},
+				[]int{8, 5, 9, 3, 7, 1, 6, 2, 4},
+				[]int{7, 0, 6, 0, 4, 5, 0, 1, 9},
+				[]int{4, 0, 1, 9, 6, 0, 0, 7, 5},
 			},
 			expectOutput: [][]int{
 				[]int{3, 4, 2, 6, 9, 7, 5, 8, 1},
@@ -457,7 +457,7 @@ func TestSolveGridRealExamples(t *testing.T) {
 				[]int{7, 0, 6, 0, 4, 5, 0, 1, 9},
 				[]int{4, 0, 1, 9, 6, 0, 0, 7, 5},
 			},
-			expectComplete: false,
+			expectComplete: true,
 		},
 	}
 
@@ -466,8 +466,8 @@ func TestSolveGridRealExamples(t *testing.T) {
 			output, cg, err := SolveGrid(td.input)
 			require.Nil(t, err)
 
-			if td.drawGrid {
-				DrawGrid(output)
+			if td.printGrid {
+				PrintGrid(output)
 			}
 
 			if !td.expectComplete {
