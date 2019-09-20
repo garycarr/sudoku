@@ -434,7 +434,7 @@ func TestSolveGridRealExamples(t *testing.T) {
 			expectComplete: true,
 		},
 		{
-			description: "two only passes with brute force",
+			description: "two",
 			input: [][]int{
 				[]int{3, 4, 2, 6, 9, 7, 5, 8, 1},
 				[]int{6, 1, 8, 5, 2, 4, 7, 9, 3},
@@ -467,97 +467,16 @@ func TestSolveGridRealExamples(t *testing.T) {
 	}
 }
 
-func TestGetRegion(t *testing.T) {
-	tt := []struct {
-		description    string
-		ep             emptyPosition
-		expectedRegion region
-	}{
-		{
-			description: "top left one",
-			ep: emptyPosition{
-				rowNumber: 0,
-				colNumber: 0,
-			},
-			expectedRegion: region{
-				minRowNumber: 0,
-				maxRowNumber: 2,
-				minColNumber: 0,
-				maxColNumber: 2,
-			},
-		},
-		{
-			description: "top left two",
-			ep: emptyPosition{
-				rowNumber: 1,
-				colNumber: 2,
-			},
-			expectedRegion: region{
-				minRowNumber: 0,
-				maxRowNumber: 2,
-				minColNumber: 0,
-				maxColNumber: 2,
-			},
-		},
-		{
-			description: "top right one",
-			ep: emptyPosition{
-				rowNumber: 1,
-				colNumber: 7,
-			},
-			expectedRegion: region{
-				minRowNumber: 0,
-				maxRowNumber: 2,
-				minColNumber: 6,
-				maxColNumber: 8,
-			},
-		},
-		{
-			description: "bottom right one",
-			ep: emptyPosition{
-				rowNumber: 8,
-				colNumber: 7,
-			},
-			expectedRegion: region{
-				minRowNumber: 6,
-				maxRowNumber: 8,
-				minColNumber: 6,
-				maxColNumber: 8,
-			},
-		},
-		{
-			description: "middle one",
-			ep: emptyPosition{
-				rowNumber: 3,
-				colNumber: 4,
-			},
-			expectedRegion: region{
-				minRowNumber: 3,
-				maxRowNumber: 5,
-				minColNumber: 3,
-				maxColNumber: 5,
-			},
-		},
-	}
-	for _, td := range tt {
-		t.Run(td.description, func(t *testing.T) {
-			region, err := getRegion(td.ep)
-			require.Nil(t, err)
-			assert.Equal(t, td.expectedRegion, region)
-		})
-	}
-}
-
 func TestRemainingColsToCheck(t *testing.T) {
 	tt := []struct {
 		description    string
-		ep             emptyPosition
+		ep             position
 		reg            region
 		expectedResult adjacentToCheck
 	}{
 		{
 			description: "first",
-			ep: emptyPosition{
+			ep: position{
 				colNumber: 0,
 				rowNumber: 0,
 			},
@@ -574,7 +493,7 @@ func TestRemainingColsToCheck(t *testing.T) {
 		},
 		{
 			description: "second",
-			ep: emptyPosition{
+			ep: position{
 				colNumber: 1,
 				rowNumber: 5,
 			},
@@ -591,7 +510,7 @@ func TestRemainingColsToCheck(t *testing.T) {
 		},
 		{
 			description: "third",
-			ep: emptyPosition{
+			ep: position{
 				colNumber: 7,
 				rowNumber: 8,
 			},
@@ -608,7 +527,7 @@ func TestRemainingColsToCheck(t *testing.T) {
 		},
 		{
 			description: "fourth",
-			ep: emptyPosition{
+			ep: position{
 				colNumber: 8,
 				rowNumber: 8,
 			},
