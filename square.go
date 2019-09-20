@@ -53,12 +53,12 @@ func NewSquare(grid [][]int, pos position) (*square, error) {
 	s := &square{
 		pos: pos,
 	}
-	err := s.getRegion(pos)
+	err := s.getRegion()
 	if err != nil {
 		return s, err
 	}
 
-	if err := s.possibleNumbers(grid); err != nil {
+	if err := s.getPossibleNumbers(grid); err != nil {
 		return s, err
 	}
 	return s, nil
@@ -66,7 +66,7 @@ func NewSquare(grid [][]int, pos position) (*square, error) {
 
 // getEmptySquares returns the positions of empty squares
 func getEmptySquares(grid [][]int) []position {
-	poss := []position{}
+	pos := []position{}
 
 	// identify missing positions
 	for rowNumber, row := range grid {
@@ -74,17 +74,17 @@ func getEmptySquares(grid [][]int) []position {
 			if num > 0 {
 				continue
 			}
-			poss = append(poss, position{
+			pos = append(pos, position{
 				rowNumber: rowNumber,
 				colNumber: colNumber,
 			})
 		}
 	}
-	return poss
+	return pos
 }
 
 // possibleNumbers returns the numbers that can possibly placed into a given position
-func (s *square) possibleNumbers(grid [][]int) error {
+func (s *square) getPossibleNumbers(grid [][]int) error {
 	s.possibleNums = []int{}
 	possibleNumbers := map[int]bool{}
 	for i := 1; i <= 9; i++ {
@@ -117,34 +117,34 @@ func (s *square) possibleNumbers(grid [][]int) error {
 }
 
 // getRegion returns he grid position that the position is in
-func (s *square) getRegion(pos position) error {
+func (s *square) getRegion() error {
 	reg := region{}
 	switch {
-	case pos.rowNumber >= 0 && pos.rowNumber <= 2:
+	case s.pos.rowNumber >= 0 && s.pos.rowNumber <= 2:
 		reg.minRowNumber = 0
 		reg.maxRowNumber = 2
-	case pos.rowNumber >= 3 && pos.rowNumber <= 5:
+	case s.pos.rowNumber >= 3 && s.pos.rowNumber <= 5:
 		reg.minRowNumber = 3
 		reg.maxRowNumber = 5
-	case pos.rowNumber >= 6 && pos.rowNumber <= 8:
+	case s.pos.rowNumber >= 6 && s.pos.rowNumber <= 8:
 		reg.minRowNumber = 6
 		reg.maxRowNumber = 8
 	default:
-		return fmt.Errorf("rowNumber %d is invalid", pos.rowNumber)
+		return fmt.Errorf("rowNumber %d is invalid", s.pos.rowNumber)
 	}
 
 	switch {
-	case pos.colNumber >= 0 && pos.colNumber <= 2:
+	case s.pos.colNumber >= 0 && s.pos.colNumber <= 2:
 		reg.minColNumber = 0
 		reg.maxColNumber = 2
-	case pos.colNumber >= 3 && pos.colNumber <= 5:
+	case s.pos.colNumber >= 3 && s.pos.colNumber <= 5:
 		reg.minColNumber = 3
 		reg.maxColNumber = 5
-	case pos.colNumber >= 6 && pos.colNumber <= 8:
+	case s.pos.colNumber >= 6 && s.pos.colNumber <= 8:
 		reg.minColNumber = 6
 		reg.maxColNumber = 8
 	default:
-		return fmt.Errorf("colNumber %d is invalid", pos.colNumber)
+		return fmt.Errorf("colNumber %d is invalid", s.pos.colNumber)
 	}
 	s.reg = reg
 	return nil
