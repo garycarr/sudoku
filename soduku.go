@@ -12,11 +12,6 @@ type CheckedGrid struct {
 	Valid    bool
 }
 
-type emptyPosition struct {
-	rowNumber int
-	colNumber int
-}
-
 type region struct {
 	minColNumber int
 	maxColNumber int
@@ -42,6 +37,57 @@ var allRegions = []region{
 	region{minRowNumber: 6, maxRowNumber: 8, minColNumber: 6, maxColNumber: 8},
 }
 
+// // SolveGrid attempts to solve a given suduko board. It returns the grid as complete as it
+// // could achieve, and a struct indicating the status of the grid
+// func SolveGrid(grid [][]int) ([][]int, CheckedGrid, error) {
+// 	// previousNumEPS holds the previous loops count of how many emptyPositions exist.
+// 	// if this number does not decrease then there is no more need to iterate
+// 	previousNumEPS := 0
+//
+// 	cg := CheckedGrid{}
+//
+// 	for {
+// 		eps := getEmptyPositions(grid)
+// 		if len(eps) == 0 || len(eps) == previousNumEPS {
+// 			break
+// 		}
+// 		previousNumEPS = len(eps)
+//
+// 		for _, ep := range eps {
+// 			foundNum, err := traverseImmediateLines(grid, ep)
+// 			if err != nil {
+// 				return nil, cg, err
+// 			}
+// 			if foundNum > 0 {
+// 				grid[ep.rowNumber][ep.colNumber] = foundNum
+// 			}
+//
+// 			if err := traverseAdjacent(grid, ep); err != nil {
+// 				return nil, cg, err
+// 			}
+// 		}
+// 	}
+// 	cg = CheckGrid(grid)
+//
+// 	if !cg.Valid {
+// 		return grid, cg, errors.New("the grid is invalid")
+// 	}
+// 	if cg.Complete {
+// 		return grid, cg, nil
+// 	}
+//
+// 	var err error
+// 	grid, err = bruteForceGuess(grid)
+// 	if err != nil {
+// 		return grid, cg, err
+// 	}
+// 	cg = CheckGrid(grid)
+// 	if !cg.Valid {
+// 		return grid, cg, errors.New("the grid is invalid after brute forcing")
+// 	}
+// 	return grid, cg, err
+// }
+
 // SolveGrid attempts to solve a given suduko board. It returns the grid as complete as it
 // could achieve, and a struct indicating the status of the grid
 func SolveGrid(grid [][]int) ([][]int, CheckedGrid, error) {
@@ -52,28 +98,33 @@ func SolveGrid(grid [][]int) ([][]int, CheckedGrid, error) {
 	cg := CheckedGrid{}
 
 	for {
-		eps := getEmptyPositions(grid)
-		if len(eps) == 0 || len(eps) == previousNumEPS {
+		epsPNs, err := getEmptyPositionsAndPossibleNumbers(grid)
+		if err != nil {
+			return nil, cg, err
+		}
+		// count epsPN.possibleNums?
+		if len(epsPNs) == 0 || len(epsPNs) == previousNumEPS {
 			break
 		}
-		previousNumEPS = len(eps)
+		previousNumEPS = len(epsPNs)
 
-		for _, ep := range eps {
-			foundNum, err := traverseImmediateLines(grid, ep)
+		for _, epPN := range epsPNs {
+			foundNum, err := traverseImmediateLines(grid, epPN)
 			if err != nil {
 				return nil, cg, err
 			}
 			if foundNum > 0 {
-				grid[ep.rowNumber][ep.colNumber] = foundNum
+				grid[epPN.ep.rowNumber][epPN.ep.colNumber] = foundNum
 			}
 
-			if err := traverseAdjacent(grid, ep); err != nil {
+			if err := traverseAdjacent(grid, epPN); err != nil {
 				return nil, cg, err
 			}
 		}
 	}
 	cg = CheckGrid(grid)
 
+	PrintGrid(grid)
 	if !cg.Valid {
 		return grid, cg, errors.New("the grid is invalid")
 	}
@@ -175,87 +226,25 @@ func CheckGrid(grid [][]int) CheckedGrid {
 	return cg
 }
 
-// getEmptyPositions returns the positions of empty boxes
-func getEmptyPositions(grid [][]int) []emptyPosition {
-	eps := []emptyPosition{}
-
-	// identify missing positions
-	for rowNumber, row := range grid {
-		for colNumber, num := range row {
-			if num > 0 {
-				continue
-			}
-			eps = append(eps, emptyPosition{
-				rowNumber: rowNumber,
-				colNumber: colNumber,
-			})
-		}
-	}
-	return eps
-}
-
 // traverseImmediateLines checks the column, row, and grid the emptyPosition is in
 // to look for entries it can make
-func traverseImmediateLines(grid [][]int, ep emptyPosition) (int, error) {
-	// check the box it is in
-	reg, err := getRegion(ep)
-	if err != nil {
-		return 0, err
-	}
+func traverseImmediateLines(grid [][]int, ep emptyPositionAndPossibleNumbers) (int, error) {
+	// // check the box it is in
+	// reg, err := getRegion(ep)
+	// if err != nil {
+	// 	return 0, err
+	// }
+	//
+	// pn, err := possibleNumbers(grid, ep, reg)
+	// if err != nil {
+	// 	return 0, err
+	// }
 
-	pn, err := possibleNumbers(grid, ep, reg)
-	if err != nil {
-		return 0, err
-	}
-
-	if len(pn) == 1 {
-		return pn[0], nil
+	if len(ep.possibleNums) == 1 {
+		return ep.possibleNums[0], nil
 	}
 	// There is more than one number available, so we cannot determine which one to use
 	return 0, nil
-}
-
-// possibleNumbers returns the numbers that can possibly placed into a given position
-func possibleNumbers(grid [][]int, ep emptyPosition, reg region) ([]int, error) {
-	possibleNumbers := map[int]bool{}
-	for i := 1; i <= 9; i++ {
-		possibleNumbers[i] = false
-	}
-
-	// check the row it is on
-	for col := 0; col <= 8; col++ {
-		if possibleNumbers[grid[ep.rowNumber][col]] {
-			continue
-		}
-		possibleNumbers[grid[ep.rowNumber][col]] = true
-	}
-
-	// check the column it is in
-	for row := 0; row <= 8; row++ {
-		if possibleNumbers[grid[row][ep.colNumber]] {
-			continue
-		}
-		possibleNumbers[grid[row][ep.colNumber]] = true
-	}
-
-	// Check the grid it is in
-	for row := reg.minRowNumber; row <= reg.maxRowNumber; row++ {
-		for col := reg.minColNumber; col <= reg.maxColNumber; col++ {
-			if possibleNumbers[grid[row][col]] {
-				continue
-			}
-			possibleNumbers[grid[row][col]] = true
-		}
-	}
-
-	nums := []int{}
-	for num, found := range possibleNumbers {
-		if !found {
-			nums = append(nums, num)
-		}
-	}
-
-	return nums, nil
 }
 
 // traverseAdjacent looks at the rows and columns next to the position to find entries
@@ -272,20 +261,15 @@ func possibleNumbers(grid [][]int, ep emptyPosition, reg region) ([]int, error) 
 // 0, 0, 0, 0, 0, 0, 0, 0, 0
 //
 // Then at position {1,8} there has to be a 1, as it cannot go anywhere else in the top right grid
-func traverseAdjacent(grid [][]int, ep emptyPosition) error {
-	reg, err := getRegion(ep)
+func traverseAdjacent(grid [][]int, epPN emptyPositionAndPossibleNumbers) error {
+	reg, err := getRegion(epPN.ep)
 	if err != nil {
 		return err
 	}
 
-	pn, err := possibleNumbers(grid, ep, reg)
-	if err != nil {
-		return err
-	}
+	r := adjacentRowsAndCols(reg, epPN.ep)
 
-	r := adjacentRowsAndCols(reg, ep)
-
-	for _, num := range pn {
+	for _, num := range epPN.possibleNums {
 		foundNumColAndRow := 0
 		foundNum := 0
 		// check the adjacent columns
@@ -302,12 +286,12 @@ func traverseAdjacent(grid [][]int, ep emptyPosition) error {
 
 						alreadyPopulated := 0
 						for _, r := range r.adjacentRows {
-							if grid[r][ep.colNumber] != 0 {
+							if grid[r][epPN.ep.colNumber] != 0 {
 								alreadyPopulated++
 							}
 						}
 						if alreadyPopulated == 2 {
-							grid[ep.rowNumber][ep.colNumber] = num
+							grid[epPN.ep.rowNumber][epPN.ep.colNumber] = num
 						}
 						break
 					}
@@ -329,12 +313,12 @@ func traverseAdjacent(grid [][]int, ep emptyPosition) error {
 					foundNumColAndRow++
 					alreadyPopulated := 0
 					for _, c := range r.adjacentCols {
-						if grid[ep.rowNumber][c] != 0 {
+						if grid[epPN.ep.rowNumber][c] != 0 {
 							alreadyPopulated++
 						}
 					}
 					if alreadyPopulated == 2 {
-						grid[ep.rowNumber][ep.colNumber] = num
+						grid[epPN.ep.rowNumber][epPN.ep.colNumber] = num
 					}
 					break
 				}
@@ -344,7 +328,7 @@ func traverseAdjacent(grid [][]int, ep emptyPosition) error {
 		// Because the entry was identified in both row and column, we know this is the correct location
 		// even though there is empty boxes next to the position
 		if foundNumColAndRow == 2 {
-			grid[ep.rowNumber][ep.colNumber] = num
+			grid[epPN.ep.rowNumber][epPN.ep.colNumber] = num
 		}
 	}
 	return nil
@@ -353,8 +337,12 @@ func traverseAdjacent(grid [][]int, ep emptyPosition) error {
 // bruteForceGuess adds in numbers to empty positions and sees if it can solve the rest of the grid
 // This is a weak brute force, it should try combinations of numbers
 func bruteForceGuess(grid [][]int) ([][]int, error) {
-	eps := getEmptyPositions(grid)
+	epPNs, err := getEmptyPositionsAndPossibleNumbers(grid)
+	if err != nil {
+		return nil, err
+	}
 
+	// eps := getEmptyPositions(grid)
 	copyGrid := func(grid [][]int) [][]int {
 		tempGrid := make([][]int, len(grid))
 		for i := range grid {
@@ -366,26 +354,17 @@ func bruteForceGuess(grid [][]int) ([][]int, error) {
 
 	tempGrid := copyGrid(grid)
 
-	for _, ep := range eps {
-		reg, err := getRegion(ep)
-		if err != nil {
-			return nil, err
-		}
-
-		pns, err := possibleNumbers(tempGrid, ep, reg)
-		if err != nil {
-			return nil, err
-		}
-		for _, pn := range pns {
-			foundNum, err := traverseImmediateLines(tempGrid, ep)
+	for _, epPN := range epPNs {
+		for _, pn := range epPN.possibleNums {
+			foundNum, err := traverseImmediateLines(tempGrid, epPN)
 			if err != nil {
 				return nil, err
 			}
 			if foundNum > 0 {
-				tempGrid[ep.rowNumber][ep.colNumber] = pn
+				tempGrid[epPN.ep.rowNumber][epPN.ep.colNumber] = pn
 			}
 
-			if err := traverseAdjacent(tempGrid, ep); err != nil {
+			if err := traverseAdjacent(tempGrid, epPN); err != nil {
 				return nil, err
 			}
 			cg := CheckGrid(tempGrid)

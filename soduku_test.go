@@ -434,7 +434,7 @@ func TestSolveGridRealExamples(t *testing.T) {
 			expectComplete: true,
 		},
 		{
-			description: "two only passes with brute force",
+			description: "two",
 			input: [][]int{
 				[]int{3, 4, 2, 6, 9, 7, 5, 8, 1},
 				[]int{6, 1, 8, 5, 2, 4, 7, 9, 3},
