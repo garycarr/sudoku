@@ -3,6 +3,8 @@ package soduku
 import (
 	"errors"
 	"fmt"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // CheckedGrid stores whether a grid is valid, and complete
@@ -20,15 +22,35 @@ type adjacentToCheck struct {
 // SolveGrid attempts to solve a given suduko board. It returns the grid as complete as it
 // could achieve, and a struct indicating the status of the grid
 func SolveGrid(grid [][]int) ([][]int, CheckedGrid, error) {
+	cg := CheckedGrid{}
+	grid, err := solver(grid)
+	if err != nil {
+		return nil, cg, err
+	}
+	cg = CheckGrid(grid)
+	if !cg.Valid {
+		return grid, cg, errors.New("the grid is invalid")
+	}
+	if cg.Complete {
+		return grid, cg, nil
+	}
+
+	grid, err = bruteForceGuess(grid)
+	if err != nil {
+		return grid, cg, err
+	}
+
+	return grid, CheckGrid(grid), nil
+}
+
+func solver(grid [][]int) ([][]int, error) {
 	// previousNumSquares holds the previous loops count of how many empty squares exist
 	previousNumSquares := 0
-
-	cg := CheckedGrid{}
 
 	for {
 		ss, err := NewSquares(grid)
 		if err != nil {
-			return nil, cg, err
+			return nil, err
 		}
 
 		if len(ss) == 0 || len(ss) == previousNumSquares {
@@ -43,31 +65,15 @@ func SolveGrid(grid [][]int) ([][]int, CheckedGrid, error) {
 		}
 		ss, err = NewSquares(grid)
 		if err != nil {
-			return nil, cg, err
+			return nil, err
 		}
 		for _, s := range ss {
 			if err := traverseAdjacent(grid, s); err != nil {
-				return nil, cg, err
+				return nil, err
 			}
 		}
 	}
-	cg = CheckGrid(grid)
-	if !cg.Valid {
-		return grid, cg, errors.New("the grid is invalid")
-	}
-	if cg.Complete {
-		return grid, cg, nil
-	}
-	var err error
-	grid, err = bruteForceGuess(grid)
-	if err != nil {
-		return grid, cg, err
-	}
-	cg = CheckGrid(grid)
-	if !cg.Valid {
-		return grid, cg, errors.New("the grid is invalid after brute forcing")
-	}
-	return grid, cg, err
+	return grid, nil
 }
 
 // CheckGrid returns where a given grid is complete, and if it is valid
@@ -237,41 +243,111 @@ func traverseAdjacent(grid [][]int, s *square) error {
 // bruteForceGuess adds in numbers to empty positions and sees if it can solve the rest of the grid
 // This is a weak brute force, it should try combinations of numbers
 func bruteForceGuess(grid [][]int) ([][]int, error) {
-	ss, err := NewSquares(grid)
+	originalGrid := copyOriginalGrid(grid)
+
+	bruteForcedGrid, err := bruteSolver(grid)
 	if err != nil {
 		return nil, err
 	}
 
-	// poss := getEmptyPositions(grid)
-	copyGrid := func(grid [][]int) [][]int {
-		tempGrid := make([][]int, len(grid))
-		for i := range grid {
-			tempGrid[i] = make([]int, len(grid[i]))
-			copy(tempGrid[i], grid[i])
-		}
-		return tempGrid
+	cg := CheckGrid(bruteForcedGrid)
+	if cg.Complete {
+		return bruteForcedGrid, nil
 	}
 
-	tempGrid := copyGrid(grid)
+	return originalGrid, nil
+}
 
+func bruteSolver(originalGrid [][]int) ([][]int, error) {
+	bruteForcedGrid := copyOriginalGrid(originalGrid)
+
+	// grid, completed, err
+	blah := func(grid [][]int, pn int, s *square) ([][]int, bool, error) {
+		grid[s.pos.rowNumber][s.pos.colNumber] = pn
+		grid, err := solver(grid)
+		cg := CheckGrid(grid)
+
+		if cg.Complete {
+			return bruteForcedGrid, true, nil
+		}
+
+		if err != nil {
+			return bruteForcedGrid, false, err
+		}
+
+		return bruteForcedGrid, false, nil
+	}
+
+	ss, err := NewSquares(originalGrid)
+	if err != nil {
+		return nil, err
+	}
 	for _, s := range ss {
 		if len(s.possibleNums) == 1 {
-			tempGrid[s.pos.rowNumber][s.pos.colNumber] = s.possibleNums[0]
+			bruteForcedGrid[s.pos.rowNumber][s.pos.colNumber] = s.possibleNums[0]
+			cg := CheckGrid(bruteForcedGrid)
+			// Check cg first, err might be for an invalid grid which is okay here
+			if cg.Complete {
+				return bruteForcedGrid, nil
+			}
 		}
 
-		if err := traverseAdjacent(tempGrid, s); err != nil {
-			return nil, err
-		}
-		cg := CheckGrid(tempGrid)
-		if !cg.Valid {
-			tempGrid = copyGrid(grid)
-			continue
-		}
-		if cg.Complete {
-			return tempGrid, nil
+		for _, pn := range s.possibleNums {
+			bruteForcedGrid, completed, err := blah(bruteForcedGrid, pn, s)
+			if err != nil {
+				return nil, err
+			}
+			if completed {
+				return bruteForcedGrid, nil
+			}
+
+			ss, err := NewSquares(bruteForcedGrid)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, secondS := range ss {
+				if len(s.possibleNums) == 1 {
+					bruteForcedGrid[s.pos.rowNumber][secondS.pos.colNumber] = secondS.possibleNums[0]
+					cg := CheckGrid(bruteForcedGrid)
+					// Check cg first, err might be for an invalid grid which is okay here
+					if cg.Complete && cg.Valid {
+						return bruteForcedGrid, nil
+					}
+				}
+
+				for _, secondPn := range secondS.possibleNums {
+					spew.Dump(fmt.Sprintf("Start second looking at pn %d first square row:%d col:%d  second square row:%d col:%d",
+						secondPn, secondS.pos.rowNumber, secondS.pos.colNumber, secondS.pos.rowNumber, secondS.pos.colNumber))
+					spew.Dump(secondS)
+					// if s.pos.colNumber == 0 && s.pos.rowNumber == 0 {
+					// 	spew.Dump(fmt.Sprintf("Start second looking at pn %d", pn))
+					// 	spew.Dump(secondS)
+					//
+					spew.Dump("before")
+					PrintGrid(bruteForcedGrid)
+					// 	spew.Dump("end second")
+					// }
+					bruteForcedGrid, completed, err := blah(bruteForcedGrid, secondPn, secondS)
+					// if s.pos.colNumber == 0 && s.pos.rowNumber == 0 {
+					// 	spew.Dump(fmt.Sprintf("AFTER Start second looking at pn %d", pn))
+					spew.Dump("after")
+					PrintGrid(bruteForcedGrid)
+					// 	spew.Dump("AFTER end second")
+					// }
+					if err != nil {
+						return nil, err
+					}
+					if completed {
+						return bruteForcedGrid, nil
+					}
+					// try every other combination
+					bruteForcedGrid = copyOriginalGrid(originalGrid)
+				}
+			}
 		}
 	}
-	return grid, nil
+	return originalGrid, nil
 }
 
 // adjacentRowsAndCols the rows and columns next to the position, but within the same grid
@@ -316,4 +392,13 @@ func PrintGrid(grid [][]int) {
 		println(fmt.Sprintf("%s |", line))
 	}
 	println("")
+}
+
+func copyOriginalGrid(grid [][]int) [][]int {
+	tempGrid := make([][]int, len(grid))
+	for i := range grid {
+		tempGrid[i] = make([]int, len(grid[i]))
+		copy(tempGrid[i], grid[i])
+	}
+	return tempGrid
 }

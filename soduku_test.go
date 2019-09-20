@@ -274,18 +274,7 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{6, 7, 8, 9, 0, 2, 3, 4, 5},
 				[]int{0, 0, 2, 3, 4, 5, 6, 7, 8},
 			},
-			expectComplete: false,
-			expectOutput: [][]int{
-				[]int{0, 2, 3, 0, 5, 6, 7, 8, 9},
-				[]int{0, 5, 6, 0, 8, 9, 1, 2, 3},
-				[]int{0, 8, 9, 0, 2, 3, 4, 5, 6},
-				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
-				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
-				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
-				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
-				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
-				[]int{9, 1, 2, 3, 4, 5, 6, 7, 8},
-			},
+			expectComplete: true,
 		},
 		{
 			description: "two",
@@ -300,18 +289,8 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{0, 7, 8, 9, 0, 0, 3, 4, 5},
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
-			expectComplete: false,
-			expectOutput: [][]int{
-				[]int{0, 0, 0, 0, 5, 0, 7, 8, 9},
-				[]int{0, 5, 0, 0, 8, 0, 1, 2, 3},
-				[]int{0, 8, 0, 0, 2, 0, 4, 5, 6},
-				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
-				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
-				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
-				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
-				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
-				[]int{0, 0, 0, 3, 4, 5, 6, 7, 8},
-			},
+			expectComplete: true,
+			printGrid:      true,
 		},
 		{
 			description: "three",
@@ -326,7 +305,7 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
-			expectComplete: false,
+			expectComplete: true,
 			expectOutput: [][]int{
 				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
 				[]int{4, 5, 6, 7, 8, 9, 0, 0, 1},
@@ -338,6 +317,7 @@ func TestSolveGridMedium(t *testing.T) {
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
+			printGrid: true,
 		},
 		{
 			description: "four",
@@ -672,6 +652,103 @@ func TestCheckGrid(t *testing.T) {
 			cg := CheckGrid(td.input)
 			assert.Equal(t, td.expectReturn.Complete, cg.Complete)
 			assert.Equal(t, td.expectReturn.Valid, cg.Valid)
+		})
+	}
+}
+
+func TestBruteForceGuess(t *testing.T) {
+	tt := []struct {
+		description  string
+		input        [][]int
+		expectReturn [][]int
+		printGrid    bool
+	}{
+		{
+			description: "one",
+			input: [][]int{
+				[]int{0, 2, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
+				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
+				[]int{9, 1, 2, 3, 4, 5, 6, 7, 8},
+			},
+			expectReturn: [][]int{
+				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
+				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
+				[]int{9, 1, 2, 3, 4, 5, 6, 7, 8},
+			},
+		},
+		{
+			description: "two",
+			input: [][]int{
+				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
+				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+			expectReturn: [][]int{
+				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
+				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
+				[]int{9, 1, 2, 3, 4, 5, 6, 7, 8},
+			},
+		},
+		{
+			description: "three",
+			input: [][]int{
+				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{9, 0, 0, 0, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 9, 0, 0, 0, 0, 0},
+				[]int{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+			expectReturn: [][]int{
+				[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+				[]int{4, 5, 6, 7, 8, 9, 1, 2, 3},
+				[]int{7, 8, 9, 1, 2, 3, 4, 5, 6},
+				[]int{2, 3, 4, 5, 6, 7, 8, 9, 1},
+				[]int{5, 6, 7, 8, 9, 1, 2, 3, 4},
+				[]int{8, 9, 1, 2, 3, 4, 5, 6, 7},
+				[]int{3, 4, 5, 6, 7, 8, 9, 1, 2},
+				[]int{6, 7, 8, 9, 1, 2, 3, 4, 5},
+				[]int{9, 1, 2, 3, 4, 5, 6, 7, 8},
+			},
+		},
+	}
+
+	for _, td := range tt {
+		t.Run(td.description, func(t *testing.T) {
+			retGrid, err := bruteForceGuess(td.input)
+			assert.Nil(t, err)
+			assert.Equal(t, td.expectReturn, retGrid)
+
+			if td.printGrid {
+				PrintGrid(retGrid)
+			}
 		})
 	}
 }
